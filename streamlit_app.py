@@ -2,18 +2,53 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import altair as alt
+import google_drive as gd
+import subprocess
+import streamlit_authenticator as stauth
+import hmac
 
-# Page title
-st.set_page_config(page_title='Interactive Data Explorer', page_icon='📊')
-st.title('📊 Interactive Data Explorer')
+def check_password():
+    """Returns `True` if the user had the correct password."""
 
-with st.expander('About this app'):
-  st.markdown('**What can this app do?**')
-  st.info('This app shows the use of Pandas for data wrangling, Altair for chart creation and editable dataframe for data interaction.')
-  st.markdown('**How to use the app?**')
-  st.warning('To engage with the app, 1. Select genres of your interest in the drop-down selection box and then 2. Select the year duration from the slider widget. As a result, this should generate an updated editable DataFrame and line plot.')
-  
-st.subheader('Which Movie Genre performs ($) best at the box office?')
+    def password_entered():
+        """Checks whether a password entered by the user is correct."""
+        if hmac.compare_digest(st.session_state["password"], st.secrets["password"]):
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # Don't store the password.
+        else:
+            st.session_state["password_correct"] = False
+
+    # Return True if the password is validated.
+    if st.session_state.get("password_correct", False):
+        return True
+
+    # Show input for password.
+    st.text_input(
+        "Password", type="password", on_change=password_entered, key="password"
+    )
+    if "password_correct" in st.session_state:
+        st.error("😕 Password incorrect")
+    return False
+
+def logout():
+    """Logs out the user by clearing the session state."""
+    for key in st.session_state.keys():
+        del st.session_state[key]
+    st.experimental_rerun()
+
+if not check_password():
+    st.stop()  # Do not continue if check_password is not True.
+
+# Layout with columns to place the logout button on the top right
+col1, col2, col3 = st.columns([1, 6, 1])
+with col1:
+    st.write("")
+with col2:
+    st.write("")
+with col3:
+    if st.button("Logout"):
+        logout()
+
 
 # Load data
 df = pd.read_csv('data/movies_genres_summary.csv')
@@ -22,7 +57,7 @@ df.year = df.year.astype('int')
 # Input widgets
 ## Genres selection
 genres_list = df.genre.unique()
-genres_selection = st.multiselect('Select genres', genres_list, ['Action', 'Adventure', 'Biography', 'Comedy', 'Drama', 'Horror'])
+genres_selection = st.multiselect('Select sports', genres_list, ['Action', 'Adventure', 'Biography', 'Comedy', 'Drama', 'Horror'])
 
 ## Year selection
 year_list = df.year.unique()
@@ -35,7 +70,6 @@ reshaped_df = reshaped_df.sort_values(by='year', ascending=False)
 
 
 # Display DataFrame
-
 df_editor = st.data_editor(reshaped_df, height=212, use_container_width=True,
                             column_config={"year": st.column_config.TextColumn("Year")},
                             num_rows="dynamic")
@@ -48,3 +82,27 @@ chart = alt.Chart(df_chart).mark_line().encode(
             color='genre:N'
             ).properties(height=320)
 st.altair_chart(chart, use_container_width=True)
+
+
+# Display another sample table with some random data
+st.subheader('Sample table')
+sample_data = pd.DataFrame(np.random.randn(10, 5), columns=list('ABCDE'))
+
+# Create three columns
+col1, col2, col3 = st.columns([1,2,1])  # The middle column is twice as wide as the side columns
+
+# Display the dataframe in the middle column
+with col2:
+    st.dataframe(sample_data)
+
+# gd.main()
+
+def run_script():
+    result = subprocess.run(['python', 'scrape_oddstrader.py'], capture_output=True, text=True)
+    st.write(result.stdout)
+    st.write(result.stderr)
+
+st.title("Run External Script")
+
+if st.button('Run Script'):
+    run_script()
