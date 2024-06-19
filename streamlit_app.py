@@ -95,7 +95,7 @@ col1, col2, col3 = st.columns([1,2,1])  # The middle column is twice as wide as 
 with col2:
     st.dataframe(sample_data)
 
-# gd.main()
+gd.main()
 
 def run_script():
     result = subprocess.run(['python', 'scrape_oddstrader.py'], capture_output=True, text=True)
